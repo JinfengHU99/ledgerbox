@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LedgerBox Web</title>
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+  <header><h1>LedgerBox (Web Demo)</h1></header>
+  <main>
+    <section id="ledgers">
+      <h2>账本</h2>
+      <ul id="ledgerList"></ul>
+    </section>
+
+    <section id="ledgerPanel" class="hidden">
+      <button id="backBtn">← 返回</button>
+      <h2 id="ledgerName"></h2>
+      <div id="meta">
+        <div>参与者: <span id="participants"></span></div>
+        <div>账户: <span id="accounts"></span></div>
+      </div>
+
+      <h3>交易</h3>
+      <ul id="txList"></ul>
+
+      <div id="createTxn">
+        <h4>添加交易</h4>
+        <input id="note" placeholder="说明" />
+        <input id="amount" placeholder="金额" type="number" />
+        <button id="createBtn">提交</button>
+      </div>
+
+      <button id="settleBtn">生成 AA 结算</button>
+      <h4>结算计划</h4>
+      <ul id="plan"></ul>
+    </section>
+  </main>
+
+  <script>
+    window.API_BASE = (typeof API_BASE !== 'undefined') ? API_BASE : (window.location.origin);
+    // default using dev server path
+    if (!window.API_BASE.endsWith('/')) window.API_BASE += '';
+  </script>
+  <script src="/web/app.js"></script>
+</body>
+</html>
