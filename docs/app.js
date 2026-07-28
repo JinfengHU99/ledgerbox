@@ -17,10 +17,37 @@
   const settleBtn = el('settleBtn');
 
   let currentLedger = null;
+  let demoData = null; // will hold fetched demo JSON locally
+
+  function computeSettlementPlan(userBalances) {
+    const creditors = [];
+    const debtors = [];
+    for (const [uid, bal] of Object.entries(userBalances)) {
+      const v = Number(bal);
+      if (v > 0.0001) creditors.push({ user_id: uid, amount: Number(v.toFixed(8)) });
+      else if (v < -0.0001) debtors.push({ user_id: uid, amount: Number((-v).toFixed(8)) });
+    }
+    creditors.sort((a,b)=>b.amount-a.amount);
+    debtors.sort((a,b)=>b.amount-a.amount);
+    const settlements = [];
+    let i=0,j=0;
+    while(i<debtors.length && j<creditors.length) {
+      const d = debtors[i];
+      const c = creditors[j];
+      const pay = Math.min(d.amount, c.amount);
+      const payRounded = Number(pay.toFixed(4));
+      settlements.push({ from_user_id: d.user_id, to_user_id: c.user_id, amount: payRounded });
+      d.amount = Number((d.amount - pay).toFixed(8));
+      c.amount = Number((c.amount - pay).toFixed(8));
+      if (d.amount <= 1e-8) i++; if (c.amount <= 1e-8) j++;
+    }
+    return settlements;
+  }
 
   async function fetchLedgers(){
     const r = await fetch(RAW_JSON);
     const j = await r.json();
+    demoData = j;
     const data = j.ledgers || [];
     ledgerListEl.innerHTML = '';
     data.forEach(l=>{
@@ -32,9 +59,8 @@
 
   async function openLedger(id){
     currentLedger = id;
-    // fetch ledger meta and transactions from raw demo.json
-    const r = await fetch(RAW_JSON);
-    const j = await r.json();
+    // use demoData cached
+    const j = demoData || (await (await fetch(RAW_JSON)).json());
     const ledger = (j.ledgers||[]).find(x=>x.id===id) || {name:id};
     ledgerName.textContent = ledger.name;
     participantsEl.textContent = (j.participants && j.participants[id] || []).map(p=>p.name).join(', ');
@@ -51,19 +77,31 @@
   createBtn.onclick = async ()=>{
     const note = noteInput.value; const amount = Number(amountInput.value||0);
     if (!currentLedger) return alert('请选择账本');
-    const body = { ledger_id: currentLedger, total_amount: amount, currency: 'USD', items: [ { user_id: (window.__demo_first_user || 'u1'), role: 'payer', amount } ], note };
-    const r = await fetch(apiRoot.replace('/api/mock','') + `/api/mock/ledgers/${currentLedger}/transactions`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
-    if (r.status===201){ alert('已创建'); openLedger(currentLedger); } else { const t = await r.text(); alert('创建失败: '+t); }
+    // Add to local demoData (non-persistent)
+    if (!demoData) demoData = await (await fetch(RAW_JSON)).json();
+    const ledgerTxs = demoData.transactions[currentLedger] = demoData.transactions[currentLedger] || [];
+    const newTxn = { id: 'local-' + Date.now(), account_id: (demoData.accounts[currentLedger] && demoData.accounts[currentLedger][0] && demoData.accounts[currentLedger][0].id) || null, actor_user_id: null, kind: 'expense', total_amount: amount, currency: 'USD', note, occurred_at: new Date().toISOString(), items: [ { id: 'local-item-' + Date.now(), user_id: (demoData.participants[currentLedger] && demoData.participants[currentLedger][0] && demoData.participants[currentLedger][0].user_id) || 'u1', role: 'payer', amount, currency: 'USD' } ] };
+    ledgerTxs.unshift(newTxn);
+    openLedger(currentLedger);
+    alert('已在本地添加（非持久化）');
   };
 
   settleBtn.onclick = async ()=>{
     if (!currentLedger) return alert('请选择账本');
-    const since = new Date(Date.now()-30*24*3600*1000).toISOString();
-    const until = new Date().toISOString();
-    const r = await fetch(apiRoot.replace('/api/mock','') + '/api/mock/settlements', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ ledger_id: currentLedger, since, until })});
-    const j = await r.json();
+    if (!demoData) demoData = await (await fetch(RAW_JSON)).json();
+    const txs = demoData.transactions[currentLedger] || [];
+    const balances = {};
+    for (const t of txs){
+      for (const it of (t.items||[])){
+        const uid = it.user_id || 'unknown';
+        balances[uid] = balances[uid] || 0;
+        if (it.role === 'payer') balances[uid] += Number(it.amount);
+        else if (it.role === 'beneficiary') balances[uid] -= Number(it.amount);
+      }
+    }
+    const plan = computeSettlementPlan(balances).map(p=>({ ...p, currency: (demoData.ledgers.find(l=>l.id===currentLedger) || {}).base_currency || 'USD' }));
     planEl.innerHTML = '';
-    (j.plan||[]).forEach(p=>{ const li=document.createElement('li'); li.textContent = `${p.from_user_id} → ${p.to_user_id} : ${p.amount} ${p.currency}`; planEl.appendChild(li); });
+    plan.forEach(p=>{ const li=document.createElement('li'); li.textContent = `${p.from_user_id} → ${p.to_user_id} : ${p.amount} ${p.currency}`; planEl.appendChild(li); });
   };
 
   // init
