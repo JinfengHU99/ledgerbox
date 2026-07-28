@@ -1,0 +1,129 @@
+{
+  "ledgers": [
+    {
+      "id": "ledger-demo-1",
+      "name": "个人账本",
+      "type": "personal",
+      "base_currency": "USD"
+    },
+    {
+      "id": "ledger-demo-2",
+      "name": "情侣账本",
+      "type": "couple",
+      "base_currency": "USD"
+    }
+  ],
+  "participants": {
+    "ledger-demo-1": [
+      {
+        "user_id": "u1",
+        "name": "我"
+      }
+    ],
+    "ledger-demo-2": [
+      {
+        "user_id": "u1",
+        "name": "我"
+      },
+      {
+        "user_id": "u2",
+        "name": "TA"
+      }
+    ]
+  },
+  "accounts": {
+    "ledger-demo-1": [
+      {
+        "id": "a1",
+        "name": "现金",
+        "currency": "USD",
+        "current_balance": 100
+      }
+    ],
+    "ledger-demo-2": [
+      {
+        "id": "a2",
+        "name": "银行卡",
+        "currency": "USD",
+        "current_balance": 200
+      }
+    ]
+  },
+  "transactions": {
+    "ledger-demo-1": [
+      {
+        "id": "t1",
+        "account_id": "a1",
+        "actor_user_id": "u1",
+        "kind": "expense",
+        "total_amount": 12.5,
+        "currency": "USD",
+        "note": "午餐",
+        "occurred_at": "2026-07-20T12:00:00Z",
+        "items": [
+          {
+            "id": "ti1",
+            "user_id": "u1",
+            "role": "payer",
+            "amount": 12.5,
+            "currency": "USD"
+          }
+        ]
+      }
+    ],
+    "ledger-demo-2": [
+      {
+        "id": "t-1785231776354",
+        "account_id": "a2",
+        "actor_user_id": null,
+        "kind": "expense",
+        "total_amount": 5,
+        "currency": "USD",
+        "note": "",
+        "occurred_at": "2026-07-28T09:42:56.354Z",
+        "items": [
+          {
+            "id": "ti-1785231776354-0",
+            "user_id": "u1",
+            "role": "payer",
+            "amount": 5,
+            "currency": "USD"
+          }
+        ]
+      },
+      {
+        "id": "t2",
+        "account_id": "a2",
+        "actor_user_id": "u1",
+        "kind": "expense",
+        "total_amount": 30,
+        "currency": "USD",
+        "note": "晚餐",
+        "occurred_at": "2026-07-25T19:00:00Z",
+        "items": [
+          {
+            "id": "ti2",
+            "user_id": "u1",
+            "role": "payer",
+            "amount": 30,
+            "currency": "USD"
+          },
+          {
+            "id": "ti3",
+            "user_id": "u2",
+            "role": "beneficiary",
+            "amount": 15,
+            "currency": "USD"
+          },
+          {
+            "id": "ti4",
+            "user_id": "u1",
+            "role": "beneficiary",
+            "amount": 15,
+            "currency": "USD"
+          }
+        ]
+      }
+    ]
+  }
+}

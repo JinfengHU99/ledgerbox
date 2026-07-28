@@ -1,0 +1,4 @@
+<view class="page">
+  <view bindtap="openLedger" data-id="demo-ledger-id">打开示例账本</view>
+  <view bindtap="createLedger">创建账本（示例）</view>
+</view>

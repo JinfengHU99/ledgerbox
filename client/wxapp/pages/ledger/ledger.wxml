@@ -1,0 +1,30 @@
+<view class="page">
+  <view>账本：{{ledger.name}}</view>
+  <view>参与者：
+    <text wx:for="{{participants}}" wx:key="user_id">{{item.name}} </text>
+  </view>
+  <view>账户：</view>
+  <view wx:for="{{accounts}}" wx:key="id">{{item.name}}: {{item.current_balance}} {{item.currency}}</view>
+
+  <view>交易列表：</view>
+  <block wx:for="{{transactions}}" wx:key="id">
+    <view class="txn">
+      <text>{{item.occurred_at}} - {{item.note}} - {{item.total_amount}} {{item.currency}}</text>
+    </view>
+  </block>
+
+  <button bindtap="openCreate">新增交易</button>
+  <button bindtap="runSettlement">生成AA结算（示例）</button>
+
+  <view wx:for="{{plan}}" wx:key="index">
+    <text>从 {{item.from_user_id}} 给 {{item.to_user_id}} : {{item.amount}} {{item.currency}}</text>
+  </view>
+
+  <view wx:if="{{showCreate}}">
+    <view>添加交易（简单）</view>
+    <input placeholder="说明" bindinput="onNote" />
+    <input placeholder="金额" bindinput="onAmount" type="number" />
+    <button bindtap="submitTxn">提交</button>
+    <button bindtap="cancelCreate">取消</button>
+  </view>
+</view>

@@ -1,0 +1,10 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/ledgers/list",
+    "pages/ledger/ledger"
+  ],
+  "window": {
+    "navigationBarTitleText": "LedgerBox"
+  }
+}

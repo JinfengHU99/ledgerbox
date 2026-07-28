@@ -1,0 +1,18 @@
+{
+  "name": "ledgerbox-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "vercel dev --listen 3000",
+    "fetch-rates": "node scripts/fetch_rates.js",
+    "test": "node scripts/run_tests.js"
+  },
+  "dependencies": {
+    "body-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-fetch": "^2.6.7",
+    "pg": "^8.11.0",
+    "qrcode": "^1.5.4"
+  }
+}

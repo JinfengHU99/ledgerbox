@@ -1,0 +1,6 @@
+<view class="page">
+  <view wx:for="{{ledgers}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
+    <text>{{item.name}} ({{item.type}})</text>
+  </view>
+  <button bindtap="refresh">刷新</button>
+</view>
