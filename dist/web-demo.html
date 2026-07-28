@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LedgerBox Web Demo (Standalone)</title>
+  <style>
+body{font-family:Arial,Helvetica,sans-serif;margin:12px;color:#222}
+header h1{margin:0 0 12px}
+.hidden{display:none}
+#ledgerList li{margin:6px 0}
+#txList li, #plan li{margin:4px 0}
+#meta div{margin:6px 0}
+#createTxn input{display:block;margin:6px 0;padding:6px;width:180px}
+button{padding:6px 10px;margin:6px 4px}
+  </style>
+</head>
+<body>
+  <header><h1>LedgerBox (Web Demo)</h1></header>
+  <main>
+    <section id="ledgers">
+      <h2>账本</h2>
+      <ul id="ledgerList"></ul>
+    </section>
+
+    <section id="ledgerPanel" class="hidden">
+      <button id="backBtn">← 返回</button>
+      <h2 id="ledgerName"></h2>
+      <div id="meta">
+        <div>参与者: <span id="participants"></span></div>
+        <div>账户: <span id="accounts"></span></div>
+      </div>
+
+      <h3>交易</h3>
+      <ul id="txList"></ul>
+
+      <div id="createTxn">
+        <h4>添加交易</h4>
+        <input id="note" placeholder="说明" />
+        <input id="amount" placeholder="金额" type="number" />
+        <button id="createBtn">提交</button>
+      </div>
+
+      <button id="settleBtn">生成 AA 结算</button>
+      <h4>结算计划</h4>
+      <ul id="plan"></ul>
+    </section>
+  </main>
+
+<script>
+(function(){
+  const RAW_JSON = 'https://raw.githubusercontent.com/JinfengHU99/ledgerbox/main/mock_data/demo.json';
+  const el = id => document.getElementById(id);
+  const ledgerListEl = el('ledgerList');
+  const ledgerPanel = el('ledgerPanel');
+  const ledgerName = el('ledgerName');
+  const participantsEl = el('participants');
+  const accountsEl = el('accounts');
+  const txListEl = el('txList');
+  const planEl = el('plan');
+  const backBtn = el('backBtn');
+  const createBtn = el('createBtn');
+  const noteInput = el('note');
+  const amountInput = el('amount');
+  const settleBtn = el('settleBtn');
+
+  let currentLedger = null;
+  let demoData = null; // cached
+
+  function computeSettlementPlan(userBalances) {
+    const creditors = [];
+    const debtors = [];
+    for (const [uid, bal] of Object.entries(userBalances)) {
+      const v = Number(bal);
+      if (v > 0.0001) creditors.push({ user_id: uid, amount: Number(v.toFixed(8)) });
+      else if (v < -0.0001) debtors.push({ user_id: uid, amount: Number((-v).toFixed(8)) });
+    }
+    creditors.sort((a,b)=>b.amount-a.amount);
+    debtors.sort((a,b)=>b.amount-a.amount);
+    const settlements = [];
+    let i=0,j=0;
+    while(i<debtors.length && j<creditors.length) {
+      const d = debtors[i];
+      const c = creditors[j];
+      const pay = Math.min(d.amount, c.amount);
+      const payRounded = Number(pay.toFixed(4));
+      settlements.push({ from_user_id: d.user_id, to_user_id: c.user_id, amount: payRounded });
+      d.amount = Number((d.amount - pay).toFixed(8));
+      c.amount = Number((c.amount - pay).toFixed(8));
+      if (d.amount <= 1e-8) i++; if (c.amount <= 1e-8) j++;
+    }
+    return settlements;
+  }
+
+  async function fetchLedgers(){
+    const r = await fetch(RAW_JSON);
+    const j = await r.json();
+    demoData = j;
+    const data = j.ledgers || [];
+    ledgerListEl.innerHTML = '';
+    data.forEach(l=>{
+      const li = document.createElement('li');
+      const a = document.createElement('a'); a.href='#'; a.textContent = `${l.name} (${l.type})`; a.onclick = (e)=>{ e.preventDefault(); openLedger(l.id); };
+      li.appendChild(a); ledgerListEl.appendChild(li);
+    });
+  }
+
+  async function openLedger(id){
+    currentLedger = id;
+    const j = demoData || (await (await fetch(RAW_JSON)).json());
+    const ledger = (j.ledgers||[]).find(x=>x.id===id) || {name:id};
+    ledgerName.textContent = ledger.name;
+    participantsEl.textContent = (j.participants && j.participants[id] || []).map(p=>p.name).join(', ');
+    accountsEl.textContent = (j.accounts && j.accounts[id] || []).map(a=>`${a.name}:${a.current_balance}${a.currency}`).join(' | ');
+    const txs = (j.transactions && j.transactions[id]) || [];
+    txListEl.innerHTML = '';
+    txs.forEach(t=>{ const li=document.createElement('li'); li.textContent = `${t.occurred_at} - ${t.note} - ${t.total_amount} ${t.currency}`; txListEl.appendChild(li); });
+    ledgerPanel.classList.remove('hidden');
+    document.getElementById('ledgers').classList.add('hidden');
+  }
+
+  backBtn.onclick = ()=>{ ledgerPanel.classList.add('hidden'); document.getElementById('ledgers').classList.remove('hidden'); };
+
+  createBtn.onclick = async ()=>{
+    const note = noteInput.value; const amount = Number(amountInput.value||0);
+    if (!currentLedger) return alert('请选择账本');
+    if (!demoData) demoData = await (await fetch(RAW_JSON)).json();
+    const ledgerTxs = demoData.transactions[currentLedger] = demoData.transactions[currentLedger] || [];
+    const newTxn = { id: 'local-' + Date.now(), account_id: (demoData.accounts[currentLedger] && demoData.accounts[currentLedger][0] && demoData.accounts[currentLedger][0].id) || null, actor_user_id: null, kind: 'expense', total_amount: amount, currency: 'USD', note, occurred_at: new Date().toISOString(), items: [ { id: 'local-item-' + Date.now(), user_id: (demoData.participants[currentLedger] && demoData.participants[currentLedger][0] && demoData.participants[currentLedger][0].user_id) || 'u1', role: 'payer', amount, currency: 'USD' } ] };
+    ledgerTxs.unshift(newTxn);
+    openLedger(currentLedger);
+    alert('已在本地添加（非持久化）');
+  };
+
+  settleBtn.onclick = async ()=>{
+    if (!currentLedger) return alert('请选择账本');
+    if (!demoData) demoData = await (await fetch(RAW_JSON)).json();
+    const txs = demoData.transactions[currentLedger] || [];
+    const balances = {};
+    for (const t of txs){
+      for (const it of (t.items||[])){
+        const uid = it.user_id || 'unknown';
+        balances[uid] = balances[uid] || 0;
+        if (it.role === 'payer') balances[uid] += Number(it.amount);
+        else if (it.role === 'beneficiary') balances[uid] -= Number(it.amount);
+      }
+    }
+    const plan = computeSettlementPlan(balances).map(p=>({ ...p, currency: (demoData.ledgers.find(l=>l.id===currentLedger) || {}).base_currency || 'USD' }));
+    planEl.innerHTML = '';
+    plan.forEach(p=>{ const li=document.createElement('li'); li.textContent = `${p.from_user_id} → ${p.to_user_id} : ${p.amount} ${p.currency}`; planEl.appendChild(li); });
+  };
+
+  fetchLedgers().catch(e=>{ console.error(e); ledgerListEl.innerHTML = '<li>无法加载账本</li>'; });
+})();
+</script>
+</body>
+</html>
