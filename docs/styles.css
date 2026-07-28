@@ -1,0 +1,8 @@
+body{font-family:Arial,Helvetica,sans-serif;margin:12px;color:#222}
+header h1{margin:0 0 12px}
+.hidden{display:none}
+#ledgerList li{margin:6px 0}
+#txList li, #plan li{margin:4px 0}
+#meta div{margin:6px 0}
+#createTxn input{display:block;margin:6px 0;padding:6px;width:180px}
+button{padding:6px 10px;margin:6px 4px}
